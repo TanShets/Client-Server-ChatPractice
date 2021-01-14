@@ -16,6 +16,7 @@ ADDR = (SERVER_IP, PORT)
 FORMAT = 'utf-8'
 EXIT_LINES = ["exit", "quit", "close connection"]
 MIN, MAX = 1, 1000
+assigned_id = 1
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
@@ -32,13 +33,16 @@ def start():
 	conn.close()
 
 def reorient_connection(conn, addr):
+	global assigned_id
 	if(conn):
 		new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		new_socket.bind((SERVER_IP, 0))
 		connection_val = True
 		while connection_val:
-			conn.send(str(new_socket.getsockname()[1]).encode(FORMAT))
+			line = str(new_socket.getsockname()[1]) + " " + str(assigned_id)
+			conn.send(line.encode(FORMAT))
 			connection_val = False
+		assigned_id = (assigned_id + 1) % 2
 		print(new_socket.getsockname()[1])
 		conn.close()
 		new_socket.listen()
@@ -49,6 +53,7 @@ def reorient_connection(conn, addr):
 			if message_length:
 				message_length = int(message_length)
 				username = new_conn.recv(message_length).decode(FORMAT)
+				new_conn.send(str(assigned_id).encode(FORMAT))
 				new_client = Client(new_conn, new_addr, username, random.randint(MIN, MAX))
 				clients[new_client.id] = new_client
 				thread = threading.Thread(target = handle_client, args = (new_conn, new_addr, username, new_client.id))
@@ -64,10 +69,13 @@ def handle_client(conn, addr, username, id):
 		if message_length:
 			message_length = int(message_length)
 			message = conn.recv(message_length).decode(FORMAT)
+			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+			print(message)
+			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 			if message in EXIT_LINES:
 				connection_val = False
 			else:
-				sendAll(username + ": " + message + "\n", id)
+				sendAll(message, id)
 			del message_length
 			del message
 	conn.close()
@@ -76,8 +84,15 @@ def handle_client(conn, addr, username, id):
 	return
 
 def sendAll(message, id):
+	print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+	print(message)
+	print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+	global clients
 	for i in clients.keys():
 		if clients[i].id != id:
+			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+			print(message)
+			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 			clients[i].conn.send(message.encode(FORMAT))
 
 print("Initiating")
