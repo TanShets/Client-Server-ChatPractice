@@ -9,25 +9,34 @@ WINDOW_HEIGHT = 500
 
 def receive_move():
 	global turn
+	global run
 	global pieces
 	global grid
 	global isEnd
+	global checkWait
 	if isEnd:
 		sys.exit()
-	move = cli.client.recv(2048).decode(cli.FORMAT)
-	print(move)
-	if len(move) >= 4:
-		move = move[:4]
-		print(move)
-		a1, b1, a2, b2 = move[0], move[1], move[2], move[3]
-		x1, y1 = grid.pos[a1], grid.pos[int(b1)]
-		x2, y2 = grid.pos[a2], grid.pos[int(b2)]
-		if pieces.get((x1, y1), False):
-			temp_piece = pieces[(x1, y1)]
-			temp_piece.set_position((x2, y2))
-			pieces[(x2, y2)] = temp_piece
-			del pieces[(x1, y1)]
-			turn = True
+
+	while run:
+		if not turn:
+			try:
+				move = cli.client.recv(2048).decode(cli.FORMAT)
+			except:
+				move = ""
+			print(move)
+			if len(move) >= 4:
+				move = move[:4]
+				print(move)
+				a1, b1, a2, b2 = move[0], move[1], move[2], move[3]
+				x1, y1 = grid.pos[a1], grid.pos[int(b1)]
+				x2, y2 = grid.pos[a2], grid.pos[int(b2)]
+				if pieces.get((x1, y1), False):
+					temp_piece = pieces[(x1, y1)]
+					temp_piece.set_position((x2, y2))
+					pieces[(x2, y2)] = temp_piece
+					del pieces[(x1, y1)]
+					turn = True
+	checkWait = False
 
 def draw():
 	global window, grid, screen_width, screen_height, pieces
@@ -83,7 +92,10 @@ square_pos = None
 selected_piece = None
 move_set = None
 isEnd = False
+checkWait = False
 #window.blit(bg, (0,0))
+thread = cli.threading.Thread(target = receive_move, args = ())
+thread.start()
 while run:
 	window.fill((0,0,0))
 	pg.time.delay(100)
@@ -129,11 +141,13 @@ while run:
 				else:
 					print("Non")
 			print(grid.get_cursor_square(pg.mouse.get_pos()))
-
+	'''
 	if not turn:
 		#print("HEre")
+		checkWait = True
 		thread = cli.threading.Thread(target = receive_move, args = ())
 		thread.start()
+	'''
 pg.quit()
 cli.send_message("exit", cli.client)
 cli.client.close()

@@ -59,13 +59,17 @@ def reorient_connection(conn, addr):
 				thread = threading.Thread(target = handle_client, args = (new_conn, new_addr, username, new_client.id))
 				thread.start()
 			#handle_client(new_conn, new_addr)
+		del clients[new_client.id]
 	return
 
 def handle_client(conn, addr, username, id):
 	print("Made it here fam")
 	connection_val = True
 	while connection_val:
-		message_length = conn.recv(HEADER).decode(FORMAT)
+		try:
+			message_length = conn.recv(HEADER).decode(FORMAT)
+		except:
+			message_length = 0
 		if message_length:
 			message_length = int(message_length)
 			message = conn.recv(message_length).decode(FORMAT)
@@ -88,12 +92,19 @@ def sendAll(message, id):
 	print(message)
 	print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 	global clients
+	to_be_deleted = []
 	for i in clients.keys():
 		if clients[i].id != id:
 			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 			print(message)
 			print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-			clients[i].conn.send(message.encode(FORMAT))
+			try:
+				clients[i].conn.send(message.encode(FORMAT))
+			except:
+				to_be_deleted.append(i)
+
+	for i in to_be_deleted:
+		del clients[i]
 
 print("Initiating")
 start()
